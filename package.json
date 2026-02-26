@@ -1,0 +1,25 @@
+{
+  "name": "pnpm-resolver-patchwork",
+  "version": "0.1.0",
+  "description": "pnpm custom resolver/fetcher for patchwork (automerge) filesystem",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^2.2.8",
+    "@automerge/automerge-repo": "^2.5.1",
+    "@automerge/automerge-repo-network-websocket": "^2.5.1",
+    "tar": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "pnpm": "11.0.0-alpha.11",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "packageManager": "pnpm@11.0.0-alpha.11+sha512.9919e7e91d829bbaec5f357b6a9f8e8f20d6cc428c10f86f0fe39f9cd3ce271af71a382294a270fcb8885340f6a17b590ea795d4cde40eb3738149a65795db07"
+}
