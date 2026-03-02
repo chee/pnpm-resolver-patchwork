@@ -1,7 +1,6 @@
 import * as fs from "node:fs/promises"
 import * as path from "node:path"
 import * as os from "node:os"
-import { create as createTar } from "tar"
 import type { Repo } from "@automerge/automerge-repo"
 import { isValidAutomergeUrl } from "@automerge/automerge-repo"
 import type { AutomergeUrl } from "@automerge/automerge-repo"
@@ -42,44 +41,28 @@ export async function fetchToDirectory(
   }
 }
 
-export async function fetchToTarball(
-  resolution: AutomergeResolution,
-  repo: Repo
-): Promise<{ tarballPath: string; cleanup: () => Promise<void> }> {
-  const { packageDir, cleanup: cleanupDir } = await fetchToDirectory(
-    resolution,
-    repo
-  )
-  const tmpDir = path.dirname(packageDir)
-
-  const tarballPath = path.join(tmpDir, "package.tgz")
-  await createTar(
-    { gzip: true, file: tarballPath, cwd: tmpDir },
-    ["package"]
-  )
-
-  return {
-    tarballPath,
-    cleanup: async () => {
-      await cleanupDir()
-    },
-  }
-}
-
-// pnpm cafs-based fetch: used by the pnpmfile integration
-// Delegates to pnpm's built-in localTarball fetcher after building a tarball.
+// pnpm cafs-based fetch: writes files to a temp directory,
+// then uses cafs.addFilesFromDir to store them directly.
 export async function fetchWithCafs(
   cafs: any,
   resolution: AutomergeResolution,
   opts: any,
-  fetchers: any,
+  _fetchers: any,
   repo: Repo
 ): Promise<any> {
-  const { tarballPath, cleanup } = await fetchToTarball(resolution, repo)
+  const { packageDir, cleanup } = await fetchToDirectory(resolution, repo)
 
   try {
-    const tarballResolution = { tarball: `file:${tarballPath}` }
-    return await fetchers.localTarball(cafs, tarballResolution, opts)
+    const { filesIndex, manifest } = cafs.addFilesFromDir(packageDir)
+    const filesMap = new Map<string, string>()
+    for (const [relativePath, entry] of Object.entries(filesIndex) as [string, any][]) {
+      filesMap.set(relativePath, entry.filePath)
+    }
+    return {
+      filesMap,
+      manifest: opts.readManifest ? manifest : undefined,
+      requiresBuild: false,
+    }
   } finally {
     await cleanup()
   }

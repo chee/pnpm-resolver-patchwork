@@ -7,7 +7,6 @@ import {
 } from "./resolver.js"
 import {
   canFetch,
-  fetchToTarball,
   fetchToDirectory,
   fetchWithCafs,
 } from "./fetcher.js"
@@ -23,7 +22,7 @@ export interface PatchworkPlugin {
     canFetch: (pkgId: string, resolution: { type?: string }) => boolean
     fetch: (
       resolution: AutomergeResolution
-    ) => Promise<{ tarballPath: string; cleanup: () => Promise<void> }>
+    ) => Promise<{ packageDir: string; cleanup: () => Promise<void> }>
   }
   shutdown: () => Promise<void>
 }
@@ -43,7 +42,7 @@ export function createPatchworkPlugin(opts?: {
     fetchers: {
       canFetch,
       fetch: (resolution: AutomergeResolution) =>
-        fetchToTarball(resolution, repo),
+        fetchToDirectory(resolution, repo),
     },
     shutdown: async () => {
       if (isOwnedRepo) {
@@ -82,7 +81,6 @@ export {
   resolve,
   parseAutomergeSpec,
   canFetch,
-  fetchToTarball,
   fetchToDirectory,
   fetchWithCafs,
   createRepo,

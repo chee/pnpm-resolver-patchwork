@@ -261,8 +261,8 @@ describe("fetcher", () => {
     expect(canFetch("", {})).toBe(false)
   })
 
-  it("fetch walks tree and produces tarball", async () => {
-    const { fetchToTarball: fetch } = await import("../src/fetcher.js")
+  it("fetch walks tree and produces directory", async () => {
+    const { fetchToDirectory: fetch } = await import("../src/fetcher.js")
     const { rootUrl } = setupSimplePackage()
     const repo = createMockRepo()
 
@@ -271,30 +271,34 @@ describe("fetcher", () => {
       repo
     )
 
-    expect(result.tarballPath).toMatch(/\.tgz$/)
-
-    // Verify tarball exists
+    // Verify directory exists with expected files
     const fs = await import("node:fs/promises")
-    const stat = await fs.stat(result.tarballPath)
-    expect(stat.size).toBeGreaterThan(0)
+    const stat = await fs.stat(result.packageDir)
+    expect(stat.isDirectory()).toBe(true)
 
-    // Extract and verify contents
-    const { list } = await import("tar")
-    const entries: string[] = []
-    await list({
-      file: result.tarballPath,
-      onReadEntry: (entry) => entries.push(entry.path),
-    })
+    const pkgJson = await fs.readFile(
+      `${result.packageDir}/package.json`,
+      "utf-8"
+    )
+    expect(JSON.parse(pkgJson).name).toBe("my-automerge-pkg")
 
-    expect(entries).toContain("package/package.json")
-    expect(entries).toContain("package/src/index.js")
-    expect(entries).toContain("package/README.md")
+    const indexJs = await fs.readFile(
+      `${result.packageDir}/src/index.js`,
+      "utf-8"
+    )
+    expect(indexJs).toContain("hello")
+
+    const readme = await fs.readFile(
+      `${result.packageDir}/README.md`,
+      "utf-8"
+    )
+    expect(readme).toContain("automerge")
 
     await result.cleanup()
   })
 
   it("fetch resolves subpath to subfolder", async () => {
-    const { fetchToTarball: fetch } = await import("../src/fetcher.js")
+    const { fetchToDirectory: fetch } = await import("../src/fetcher.js")
     setupPackageWithSubpath()
     const repo = createMockRepo()
 
@@ -303,17 +307,20 @@ describe("fetcher", () => {
       repo
     )
 
-    const { list } = await import("tar")
-    const entries: string[] = []
-    await list({
-      file: result.tarballPath,
-      onReadEntry: (entry) => entries.push(entry.path),
-    })
+    const fs = await import("node:fs/promises")
 
-    expect(entries).toContain("package/package.json")
-    expect(entries).toContain("package/index.js")
-    // Should NOT contain root-level files, only dist/ contents
-    expect(entries).not.toContain("package/dist/index.js")
+    // Should contain dist/ contents
+    const pkgJson = await fs.readFile(
+      `${result.packageDir}/package.json`,
+      "utf-8"
+    )
+    expect(JSON.parse(pkgJson).main).toBe("index.js")
+
+    const indexJs = await fs.readFile(
+      `${result.packageDir}/index.js`,
+      "utf-8"
+    )
+    expect(indexJs).toContain("from dist")
 
     await result.cleanup()
   })
@@ -395,21 +402,23 @@ describe("createPatchworkPlugin", () => {
     expect(resolution.manifest?.name).toBe("my-automerge-pkg")
     expect(plugin.fetchers.canFetch("", resolution.resolution)).toBe(true)
 
-    const { tarballPath, cleanup } = await plugin.fetchers.fetch(
+    const { packageDir, cleanup } = await plugin.fetchers.fetch(
       resolution.resolution
     )
 
-    // Verify the tarball has expected files
-    const { list } = await import("tar")
-    const entries: string[] = []
-    await list({
-      file: tarballPath,
-      onReadEntry: (entry) => entries.push(entry.path),
-    })
+    // Verify the directory has expected files
+    const fs = await import("node:fs/promises")
+    const pkgJson = await fs.readFile(
+      `${packageDir}/package.json`,
+      "utf-8"
+    )
+    expect(JSON.parse(pkgJson).name).toBe("my-automerge-pkg")
 
-    expect(entries).toContain("package/package.json")
-    expect(entries).toContain("package/src/index.js")
-    expect(entries).toContain("package/README.md")
+    const indexJs = await fs.readFile(
+      `${packageDir}/src/index.js`,
+      "utf-8"
+    )
+    expect(indexJs).toContain("hello")
 
     await cleanup()
     await plugin.shutdown()

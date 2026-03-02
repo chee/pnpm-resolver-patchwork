@@ -12,8 +12,7 @@
   "dependencies": {
     "@automerge/automerge": "^2.2.8",
     "@automerge/automerge-repo": "^2.5.1",
-    "@automerge/automerge-repo-network-websocket": "^2.5.1",
-    "tar": "^7.0.0"
+    "@automerge/automerge-repo-network-websocket": "^2.5.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
